@@ -105,18 +105,16 @@ DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
+        # On force le moteur MySQL au cas où l'URL commence par mysql://
+        engine='django.db.backends.mysql'
     )
 }
 
-# Ajoute ce correctif juste en dessous :
+# Correctif pour SSL et SQL Mode (indispensable pour Aiven)
 DATABASES['default']['OPTIONS'] = {
-    # On force l'init_command pour éviter les problèmes de mode SQL
-    'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-}
-
-# Ajoute ce correctif juste en dessous :
-DATABASES['default']['OPTIONS'] = {
-    # On force l'init_command pour éviter les problèmes de mode SQL
+    'ssl': {
+        'ca': '/etc/ssl/certs/ca-certificates.crt', # Certificats installés par défaut sur Render
+    },
     'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
 }
 
