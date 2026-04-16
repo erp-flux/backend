@@ -100,23 +100,37 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #     }
 # }
 
-# Configuration DB dynamique
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600,
-        # On force le moteur MySQL au cas où l'URL commence par mysql://
-        engine='django.db.backends.mysql'
-    )
-}
+# Configuration de la base de données (Optimisée pour Aiven & Render)
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# Correctif pour SSL et SQL Mode (indispensable pour Aiven)
-DATABASES['default']['OPTIONS'] = {
-    'ssl': {
-        'ca': '/etc/ssl/certs/ca-certificates.crt', # Certificats installés par défaut sur Render
-    },
-    'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-}
+if DATABASE_URL:
+    # Nettoyage de l'URL pour supprimer les espaces invisibles ou les caractères de fin de ligne
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL.strip(), engine='django.db.backends.mysql')
+    }
+else:
+    # Fallback sur les variables d'environnement individuelles (plus sûr sur Render)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('DATABASE_NAME', 'defaultdb'),
+            'USER': os.environ.get('DATABASE_USER', 'avnadmin'),
+            'PASSWORD': os.environ.get('DATABASE_PASSWORD', ''),
+            'HOST': os.environ.get('DATABASE_HOST', '').strip(),
+            'PORT': os.environ.get('DATABASE_PORT', '20031'),
+        }
+    }
+
+# Appliquer la configuration SSL et le mode SQL (Indispensable pour Aiven)
+DATABASES['default'].update({
+    'CONN_MAX_AGE': 600,
+    'OPTIONS': {
+        'ssl': {
+            'ca': '/etc/ssl/certs/ca-certificates.crt', # Chemin standard sur Render/Ubuntu
+        },
+        'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+    }
+})
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
