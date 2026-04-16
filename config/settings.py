@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import tempfile
 import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -122,11 +123,24 @@ else:
     }
 
 # Appliquer la configuration SSL et le mode SQL (Indispensable pour Aiven)
+CA_CERT_CONTENT = os.environ.get('DB_CA_CERT')
+CA_CERT_PATH = '/etc/ssl/certs/ca-certificates.crt' # Défaut Render
+
+if CA_CERT_CONTENT:
+    # On crée un fichier temporaire pour stocker le certificat CA fourni par Aiven
+    try:
+        temp_ca = tempfile.NamedTemporaryFile(delete=False, suffix='.pem')
+        temp_ca.write(CA_CERT_CONTENT.encode())
+        temp_ca.close()
+        CA_CERT_PATH = temp_ca.name
+    except Exception:
+        pass
+
 DATABASES['default'].update({
     'CONN_MAX_AGE': 600,
     'OPTIONS': {
         'ssl': {
-            'ca': '/etc/ssl/certs/ca-certificates.crt', # Chemin standard sur Render/Ubuntu
+            'ca': CA_CERT_PATH,
         },
         'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
     }
